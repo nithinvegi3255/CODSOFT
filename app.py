@@ -1,84 +1,77 @@
 import streamlit as st
+import pandas as pd
 import joblib
 import time
 
-# -----------------------------
+# ----------------------------
 # Load Model
-# -----------------------------
+# ----------------------------
 model = joblib.load("model.pkl")
-tfidf = joblib.load("tfidf.pkl")
+category_encoder = joblib.load("category_encoder.pkl")
+gender_encoder = joblib.load("gender_encoder.pkl")
 
-# -----------------------------
+# ----------------------------
 # Page Config
-# -----------------------------
+# ----------------------------
 st.set_page_config(
-    page_title="AI Movie Genre Classifier",
-    page_icon="🎬",
+    page_title="AI Credit Card Fraud Detection",
+    page_icon="💳",
     layout="wide"
 )
 
-# -----------------------------
-# Custom CSS
-# -----------------------------
+# ----------------------------
+# CSS
+# ----------------------------
 st.markdown("""
 <style>
 
 .stApp{
-background:linear-gradient(135deg,#0f172a,#1e293b,#111827);
+background:linear-gradient(135deg,#0F172A,#1E293B,#111827);
 color:white;
 }
 
-.main-title{
+.title{
 text-align:center;
-font-size:52px;
+font-size:48px;
 font-weight:bold;
-color:#38bdf8;
+color:#38BDF8;
 }
 
-.sub{
+.subtitle{
 text-align:center;
-font-size:20px;
-color:#cbd5e1;
+font-size:18px;
+color:#CBD5E1;
 margin-bottom:30px;
 }
 
 .card{
-background:rgba(255,255,255,0.08);
+background:rgba(255,255,255,.08);
 padding:25px;
-border-radius:18px;
-backdrop-filter:blur(12px);
+border-radius:20px;
+backdrop-filter:blur(15px);
 border:1px solid rgba(255,255,255,.15);
 }
 
 .result{
-background:linear-gradient(90deg,#2563eb,#06b6d4);
-padding:18px;
+padding:20px;
 border-radius:15px;
 text-align:center;
-font-size:30px;
+font-size:28px;
 font-weight:bold;
-color:white;
 margin-top:20px;
-}
-
-.genre{
-font-size:26px;
-font-weight:bold;
 }
 
 .stButton>button{
 width:100%;
 height:55px;
+background:#2563EB;
+color:white;
 font-size:20px;
 border-radius:12px;
-background:#2563eb;
-color:white;
-border:none;
 }
 
 .stButton>button:hover{
-background:#1d4ed8;
-color:white;
+background:#1D4ED8;
 }
 
 footer{
@@ -88,117 +81,105 @@ visibility:hidden;
 </style>
 """, unsafe_allow_html=True)
 
-# -----------------------------
+# ----------------------------
 # Header
-# -----------------------------
-st.markdown("<div class='main-title'>🎬 AI Movie Genre Classifier</div>", unsafe_allow_html=True)
+# ----------------------------
+st.markdown("<div class='title'>💳 AI Credit Card Fraud Detection</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Detect fraudulent transactions using Machine Learning</div>", unsafe_allow_html=True)
 
-st.markdown("<div class='sub'>Predict the genre of any movie using Machine Learning</div>", unsafe_allow_html=True)
+left,right = st.columns([2,1])
 
-col1,col2=st.columns([2,1])
-
-with col1:
+# ----------------------------
+# Left Card
+# ----------------------------
+with left:
 
     st.markdown("<div class='card'>",unsafe_allow_html=True)
 
-    plot=st.text_area(
-        "📝 Enter Movie Plot",
-        height=260,
-        placeholder="Example: A detective investigates mysterious murders in a dark city..."
+    category = st.selectbox(
+        "🛒 Transaction Category",
+        category_encoder.classes_
     )
 
-    predict=st.button("🚀 Predict Genre")
+    amount = st.number_input(
+        "💰 Transaction Amount ($)",
+        min_value=0.0,
+        value=100.0
+    )
+
+    gender = st.selectbox(
+        "👤 Customer Gender",
+        gender_encoder.classes_
+    )
+
+    predict = st.button("🔍 Detect Fraud")
 
     st.markdown("</div>",unsafe_allow_html=True)
 
-with col2:
+# ----------------------------
+# Right Card
+# ----------------------------
+with right:
 
     st.markdown("<div class='card'>",unsafe_allow_html=True)
 
-    st.subheader("📊 Model Details")
+    st.subheader("📊 Model Information")
 
-    st.write("✅ Algorithm : Logistic Regression")
+    st.write("✅ Algorithm : Random Forest")
 
-    st.write("✅ Vectorizer : TF-IDF")
+    st.write("📂 Dataset : Credit Card Transactions")
 
-    st.write("✅ Dataset : Kaggle Movie Genre Dataset")
+    st.write("🎯 Accuracy : 99.44%")
 
-    st.write("🎯 Accuracy : 58.36%")
+    st.write("⚡ Prediction : Real-Time")
 
     st.markdown("</div>",unsafe_allow_html=True)
 
-# -----------------------------
+# ----------------------------
 # Prediction
-# -----------------------------
+# ----------------------------
 if predict:
 
-    if plot.strip()=="":
+    with st.spinner("🤖 AI is analysing transaction..."):
+        time.sleep(2)
 
-        st.warning("⚠ Please enter a movie plot.")
+    category_value = category_encoder.transform([category])[0]
+    gender_value = gender_encoder.transform([gender])[0]
 
-    else:
+    sample = pd.DataFrame(
+        [[category_value, amount, gender_value]],
+        columns=["category","amt","gender"]
+    )
 
-        with st.spinner("🤖 AI is analysing the movie plot..."):
+    prediction = model.predict(sample)[0]
 
-            time.sleep(2)
+    if prediction == 1:
 
-            vector=tfidf.transform([plot])
-
-            genre=model.predict(vector)[0].strip()
-
-        emoji={
-
-            "drama":"🎭",
-
-            "comedy":"😂",
-
-            "action":"💥",
-
-            "thriller":"🔪",
-
-            "horror":"👻",
-
-            "romance":"❤️",
-
-            "crime":"🚔",
-
-            "adventure":"🗺️",
-
-            "animation":"🎨",
-
-            "sci-fi":"🚀",
-
-            "fantasy":"🧙",
-
-            "family":"👨‍👩‍👧",
-
-            "documentary":"🎥"
-
-        }
-
-        icon=emoji.get(genre.lower(),"🎬")
-
-        st.markdown(f"""
-
-<div class="result">
-
-{icon}<br>
-
-Predicted Genre<br><br>
-
-<span class="genre">{genre.upper()}</span>
-
+        st.markdown("""
+<div class='result' style='background:#DC2626;color:white;'>
+🚨 FRAUD DETECTED
 </div>
-
 """,unsafe_allow_html=True)
+
+        st.error("High Risk Transaction!")
 
         st.progress(95)
 
-        st.success("Prediction completed successfully.")
+    else:
+
+        st.markdown("""
+<div class='result' style='background:#16A34A;color:white;'>
+✅ LEGITIMATE TRANSACTION
+</div>
+""",unsafe_allow_html=True)
+
+        st.success("Transaction appears safe.")
+
+        st.progress(20)
 
 st.markdown("---")
 
 st.markdown(
-"<center>Developed with ❤️ using Python • Scikit-Learn • Streamlit</center>",
+"<center>💻 Developed using Python • Scikit-Learn • Streamlit</center>",
 unsafe_allow_html=True
 )

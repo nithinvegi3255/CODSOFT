@@ -1,56 +1,55 @@
 import pandas as pd
 import joblib
 
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
-train = pd.read_csv(
-    
-    "datasets/train_data.txt",
-    sep=":::",
-    engine="python",
-    names=["ID", "Title", "Genre", "Plot"]
-   
-)
-print(train.head())
-print(train.columns)
-print(train.shape)
-print(train.head())
-test = pd.read_csv(
-    "datasets/test_data.txt",
-    sep=":::",
-    engine="python",
-    names=["ID", "Title", "Plot"]
-)
+# Load only first 50000 records (faster training)
+data = pd.read_csv("datasets/fraudTrain.csv", nrows=50000)
 
+print("Dataset Shape:", data.shape)
 
-test_labels = pd.read_csv(
-    "datasets/test_data_solution.txt",
-    sep=":::",
-    engine="python",
-    names=["ID", "Title", "Genre", "Plot"]
+# Select useful columns
+data = data[["category", "amt", "gender", "is_fraud"]]
+
+# Encode categorical columns
+le_category = LabelEncoder()
+le_gender = LabelEncoder()
+
+data["category"] = le_category.fit_transform(data["category"])
+data["gender"] = le_gender.fit_transform(data["gender"])
+
+# Features and Target
+X = data.drop("is_fraud", axis=1)
+y = data["is_fraud"]
+
+# Split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
 )
 
-tfidf = TfidfVectorizer(stop_words="english", max_features=5000)
+# Train Model
+model = RandomForestClassifier(
+    n_estimators=100,
+    random_state=42
+)
 
-X_train = tfidf.fit_transform(train["Plot"].astype(str))
-X_test = tfidf.transform(test["Plot"].astype(str))
+model.fit(X_train, y_train)
 
+# Prediction
+pred = model.predict(X_test)
 
-model = LogisticRegression(max_iter=1000)
+accuracy = accuracy_score(y_test, pred)
 
-model.fit(X_train, train["Genre"])
+print(f"Accuracy : {accuracy*100:.2f}%")
 
-predictions = model.predict(X_test)
-
-accuracy = accuracy_score(test_labels["Genre"], predictions)
-
-print("Accuracy :", accuracy)
-
-
+# Save Files
 joblib.dump(model, "model.pkl")
-joblib.dump(tfidf, "tfidf.pkl")
+joblib.dump(le_category, "category_encoder.pkl")
+joblib.dump(le_gender, "gender_encoder.pkl")
 
 print("✅ model.pkl saved")
-print("✅ tfidf.pkl saved")
+print("✅ category_encoder.pkl saved")
+print("✅ gender_encoder.pkl saved")
